@@ -1,0 +1,1 @@
+# AI-Trend-NEWS
