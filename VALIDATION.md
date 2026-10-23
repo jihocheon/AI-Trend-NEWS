@@ -29,3 +29,19 @@ The labelled four-item fixture has the expected action and topic on every item. 
 No credential values were read, printed, saved, or invented. No billing or deployment was configured. No external publishing was attempted. Network/TLS checks remain enabled. Live provider behavior, account-specific free quotas, Notion permissions, and summary quality remain unverified.
 
 CI configuration was written but has not been executed on GitHub. Local tests and commands above were actually executed. No configuration was published or cloud deployment performed.
+
+## Follow-up live attempt: 2026-10-24 (Asia/Seoul)
+
+The implementation was committed as `447a1ee` and pushed to GitHub `main` with a normal fast-forward push. All 16 tests passed again before that commit.
+
+Credential presence was rechecked without revealing values:
+
+- `NOTION_TOKEN`: present. Authenticated `GET /v1/users/me` succeeded.
+- `NOTION_PARENT_PAGE_ID`: present. Authenticated retrieval of that parent page succeeded. This establishes read access, not insert/update permission.
+- `GEMINI_API_KEY`: absent from the running process. A Gemini secret requirement already exists in environment configuration; no duplicate requirement was added. Gemini generation could not run.
+
+Real source checks each failed with an explicit proxy destination denial (403): `huggingface.co`, `export.arxiv.org`, and `api.github.com`. A small live CLI run with `--limit 1 --sync-notion` was attempted and exited nonzero at credential preflight. No fixture data was substituted, no Notion pages were created, and page URL verification and live duplicate checks could not execute.
+
+A network configuration draft was saved adding those three source hosts, preserving `api.notion.com` and `generativelanguage.googleapis.com`. Saving the draft did not change the running network policy or publish the configuration. The runtime-status tool was unavailable in this session; policy evidence came from the supported local policy snapshot, saved configuration metadata, and actual HTTP requests.
+
+To unblock the live test: securely supply a free-tier Gemini key as `GEMINI_API_KEY` in environment settings; review/save the drafted domain additions and publish the environment; ensure the updated key and network access reach the running task. Keep billing disabled. Notion credentials do not need to be supplied again based on these successful reads. Insert/update rights and live summary quality still require an actual successful end-to-end test.
