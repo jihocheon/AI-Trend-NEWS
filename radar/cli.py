@@ -60,7 +60,7 @@ def main(argv=None):
             print(json.dumps({"notion_synced": notion.sync(store)}))
             return 0
         reasoner = SampleReasoner() if args.mode == "sample" else GeminiReasoner(
-            http, os.getenv("GEMINI_API_KEY"), os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite"))
+            http, os.getenv("GEMINI_API_KEY"), os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"))
         while True:
             if args.mode == "sample":
                 sources = collectors.sample()

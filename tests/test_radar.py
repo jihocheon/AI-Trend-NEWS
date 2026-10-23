@@ -131,8 +131,13 @@ class AdapterTests(unittest.TestCase):
         http = FakeHTTP([gemini_reply()])
         decision = GeminiReasoner(http, "test-only").analyze(collectors.sample()[0], [])
         self.assertEqual(decision.decision, "Create")
+        self.assertIn("/models/gemini-3.5-flash-lite:generateContent", http.calls[0][1])
         self.assertIn("x-goog-api-key", http.calls[0][2]["headers"])
         self.assertNotIn("test-only", http.calls[0][1])
+        schema = http.calls[0][2]["data"]["generationConfig"]["responseSchema"]
+        self.assertEqual(schema["type"], "OBJECT")
+        self.assertEqual(schema["properties"]["decision"]["enum"], ["Create", "Update", "Skip"])
+        self.assertTrue(schema["properties"]["target_id"]["nullable"])
 
     def test_gemini_rejects_invalid_target_and_empty_summary(self):
         for reply in [gemini_reply(decision="Update", target_id=999), gemini_reply(summary=""),

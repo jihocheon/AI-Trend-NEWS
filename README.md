@@ -30,7 +30,7 @@ Use separate sample and live databases to keep fixture topics out of the real ra
 
 Create a Gemini API key in Google AI Studio using a project with **no billing enabled** and free-tier access. Never enable billing for this project. Free-tier availability, model access, and quotas vary by region/account and may change; this application cannot inspect your billing status. It stops on quota/access errors instead of switching providers or paid models. It uses no Google Search grounding or other paid tools.
 
-Provide `GEMINI_API_KEY` securely through your shell or environment settings, never in source code, command arguments, logs, or chat. `.env.example` lists names only; `.env` files are **not automatically loaded**. Optional `GEMINI_MODEL` defaults to `gemini-2.5-flash-lite`; choose only a model available on your account's free tier. `GITHUB_TOKEN` is optional for public repository search; it may improve rate limits.
+Provide `GEMINI_API_KEY` securely through your shell or environment settings, never in source code, command arguments, logs, or chat. `.env.example` lists names only; `.env` files are **not automatically loaded**. Optional `GEMINI_MODEL` defaults to `gemini-3.5-flash-lite`; choose only a model available on your account's free tier. `GITHUB_TOKEN` is optional for public repository search; it may improve rate limits.
 
 ```bash
 ai-radar --db var/live.sqlite3 run --mode live --limit 3
