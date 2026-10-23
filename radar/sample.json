@@ -1,0 +1,6 @@
+[
+  {"external_id":"sample-rss-1","kind":"rss","title":"Retrieval augmented generation improves enterprise search","url":"https://example.com/rag","text":"Retrieval augmented generation combines document retrieval with grounded language model answers.","published":"2026-01-01T00:00:00Z"},
+  {"external_id":"sample-arxiv-1","kind":"arxiv","title":"Evaluating retrieval augmented generation","url":"https://arxiv.org/abs/sample","text":"Retrieval augmented generation evaluation measures grounding and answer quality.","published":"2026-01-02T00:00:00Z"},
+  {"external_id":"sample-github-1","kind":"github","title":"example/agent-toolkit","url":"https://github.com/example/agent-toolkit","text":"AI agents coordinate tools and workflows with explicit state.","published":"2026-01-03T00:00:00Z"},
+  {"external_id":"sample-noise","kind":"rss","title":"Weekend weather report","url":"https://example.com/weather","text":"Sunny skies this weekend.","published":"2026-01-04T00:00:00Z"}
+]
