@@ -29,6 +29,17 @@ def parser():
     collect.add_argument("--archive-days", type=int, default=90)
     collect.add_argument("--sync-notion", action="store_true", help="Explicitly publish to Notion")
     collect.add_argument("--interval", type=int, default=0, help="Repeat locally every N seconds; 0 runs once")
+    commands.add_parser('bootstrap',help='Fetch originals and install a small curated Korean starter set; no Gemini')
+    commands.add_parser('workspace-sync',help='Additively publish Wiki/navigation/briefings')
+    research_cmd=commands.add_parser('research',help='Inspect FTS5 retrieval with excerpts and history')
+    research_cmd.add_argument('query')
+    find=commands.add_parser('search',help='Search technology, aliases, model, use case')
+    find.add_argument('query',nargs='?',default='')
+    find.add_argument('--category')
+    enrich_cmd=commands.add_parser('enrich',help='Guarded Gemini enrichment of one existing reference')
+    enrich_cmd.add_argument('topic_id',type=int)
+    p.add_argument('--ranking-weights',help='JSON object of six nonnegative weights summing to one')
+    p.add_argument('--interests',help='JSON array of interests; signals, not a whitelist')
     commands.add_parser("topics", help="List ranked topics, including archived ones")
     commands.add_parser("sync", help="Publish pending changes to Notion")
     return p
@@ -50,17 +61,51 @@ def main(argv=None):
     store = Store(args.db)
     http = HTTP()
     try:
+        interests=None
+        weights=None
+        if args.ranking_weights:
+            from .config import validate_weights
+            weights=validate_weights(json.loads(Path(args.ranking_weights).read_text()))
+        if args.interests:
+            interests=json.loads(Path(args.interests).read_text())
+            if not isinstance(interests,list) or any(not isinstance(x,str) for x in interests):
+                p.error('interests must be a JSON array of strings')
+        from .knowledge import migrate
+        migrate(store)
+        if args.command == 'bootstrap':
+            from .bootstrap import bootstrap
+            print(json.dumps(bootstrap(store,http,interests,weights=weights),ensure_ascii=False));return 0
+        if args.command == 'research':
+            from .retrieval import retrieve
+            print(json.dumps(retrieve(store,args.query),ensure_ascii=False,indent=2));return 0
+        if args.command == 'search':
+            from .knowledge import search
+            print(json.dumps(search(store,args.query,args.category),ensure_ascii=False,indent=2));return 0
+        if args.command == 'workspace-sync':
+            from .workspace import Workspace
+            print(json.dumps(Workspace(store,Notion(http,os.getenv('NOTION_TOKEN'),os.getenv('NOTION_PARENT_PAGE_ID'))).sync()));return 0
         if args.command == "topics":
-            print(json.dumps(store.topics(), indent=2))
+            print(json.dumps(store.topics(), indent=2,ensure_ascii=False))
             return 0
         notion = None
-        if args.command == "sync" or args.sync_notion:
+        if args.command == "sync" or getattr(args,"sync_notion",False):
             notion = Notion(http, os.getenv("NOTION_TOKEN"), os.getenv("NOTION_PARENT_PAGE_ID"))
         if args.command == "sync":
-            print(json.dumps({"notion_synced": notion.sync(store)}))
+            from .workspace import Workspace
+            print(json.dumps(Workspace(store,notion).sync()))
             return 0
-        reasoner = SampleReasoner() if args.mode == "sample" else GeminiReasoner(
-            http, os.getenv("GEMINI_API_KEY"), os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"))
+        if args.command == 'enrich' or args.mode == 'live':
+            from .free_tier import FreeTierBudget
+            model=os.getenv('GEMINI_MODEL','gemini-3.5-flash-lite')
+            policy=FreeTierBudget(http,model,os.getenv('GEMINI_BILLING_DISABLED'),store.db)
+            reasoner=GeminiReasoner(http,os.getenv('GEMINI_API_KEY'),model,policy=policy)
+        else:
+            reasoner=SampleReasoner()
+        if args.command == 'enrich':
+            from .enrichment import enrich
+            from .knowledge import rank
+            print(json.dumps({'enriched':enrich(store,reasoner,args.topic_id)}))
+            rank(store,interests,weights=weights);return 0
         while True:
             if args.mode == "sample":
                 sources = collectors.sample()
@@ -71,9 +116,12 @@ def main(argv=None):
                     sources.extend(collectors.rss(http, url, args.limit))
                 sources.extend(collectors.arxiv(http, args.arxiv_query, args.limit))
                 sources.extend(collectors.github(http, args.github_query, args.limit, os.getenv("GITHUB_TOKEN")))
-            counts = run(store, sources, reasoner, archive_days=args.archive_days)
+            counts = run(store, sources, reasoner, archive_days=args.archive_days,curate=args.mode=="live",interests=interests,weights=weights)
+            pending_count=store.db.execute('SELECT count(*) FROM sources WHERE processed=0').fetchone()[0]
+            if pending_count:counts['pending_sources']=pending_count
             if notion:
-                counts["notion_synced"] = notion.sync(store)
+                from .workspace import Workspace
+                counts["workspace"] = Workspace(store,notion).sync()
             print(json.dumps({"mode": args.mode, **counts}), flush=True)
             if not args.interval:
                 return 0

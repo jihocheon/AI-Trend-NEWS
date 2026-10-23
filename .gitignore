@@ -7,3 +7,4 @@ var/
 *.sqlite3-*
 build/
 dist/
+*.pre-wiki-v1.bak

@@ -1,107 +1,92 @@
-# AI Technology Radar Agent
+# AI Technology Radar
 
-A working local-first Python pipeline: collect RSS / arXiv / GitHub → retrieve related topics → classify, summarize, and decide Create / Update / Skip → persist evidence and history in SQLite → rank and archive → optionally publish to Notion.
+A local-first, curated AI engineering reference collection **and** a Korean AI trends briefing, powered by the same sources, topic identities, retrieval, and relevance ranking. This is neither a page-count generator nor an exhaustive AI encyclopedia.
 
-Python 3.11+; no runtime packages, OpenAI API, cloud deployment, paid services, or billing setup required. The default sample mode needs no keys or network. Architecture is inspired by AgenticWorks' separation of knowledge pipelines, orchestration, tools, and evaluations; it does not depend on or claim compatibility with that framework.
+It selects worthwhile technologies, retrieves existing knowledge before decisions, preserves evergreen explanations, and records what changed separately. Strong interests include LLMs, agent harnesses, orchestration, MCP, RAG, inference and evaluation; adjacent discoveries remain eligible.
 
-## Quick start
+## Run locally
+
+Python 3.11+ with SQLite FTS5; no runtime packages or cloud deployment required.
 
 ```bash
-cd /path/to/AI-Trend-NEWS
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e .
 python -m unittest discover -s tests -v
-ai-radar run
-ai-radar topics
-ai-radar run  # unchanged evidence is not processed again
+# Install three carefully selected Korean references from official originals; no Gemini:
+ai-radar --db var/radar.sqlite3 bootstrap
+ai-radar --db var/radar.sqlite3 search 'RAG'
+ai-radar --db var/radar.sqlite3 search 'MCP' --category Agents
+python -m radar.evaluate --db var/radar.sqlite3
 ```
 
-The first run produces **2 Create, 1 Update, 1 Skip**. The second produces all zeros. Sample evidence is fictional and fixed; sample reasoning is deterministic rules, not Gemini. Data and rotating execution logs are under ignored `var/`. `python -m radar` also works without installing the command. Global options go **before** the subcommand:
+The starter references cover LLM architecture, RAG, and agent harnesses/orchestration/MCP because they are useful, interconnected engineering references. They are curated editorial starting points, not evidence of automated Gemini writing or a requirement to create every category. They contain source links, technical explanations, trade-offs, Mermaid diagrams, and small Python examples executed in regression tests. Simpler future entries may be shorter.
+
+For the already populated workspace use `--db var/live-integration.sqlite3`. Preserve this database: it holds the existing Notion identities. Do not create a fresh database to resync the same workspace.
+
+## Notion workspace
+
+Securely provide `NOTION_TOKEN` and `NOTION_PARENT_PAGE_ID`. Share the parent page with the integration with read/insert/update capabilities. No values belong in source code, shell arguments, logs, or chat. `.env.example` lists names; `.env` is **not** auto-loaded.
 
 ```bash
-ai-radar --db var/sample.sqlite3 --log var/sample.log run --mode sample
-ai-radar --db var/sample.sqlite3 topics
+ai-radar --db var/radar.sqlite3 workspace-sync
+python scripts/verify_notion.py --db var/radar.sqlite3
 ```
 
-Use separate sample and live databases to keep fixture topics out of the real radar. Sources are versioned by kind, external ID, and content hash: unchanged items are ignored; changed content is retained as new evidence.
+Five linked areas: Home Dashboard, Technology Wiki, Daily Briefing, Research & Sources, and Technology Radar. The Wiki contains a searchable database with Category, Relevance, Last updated, Status, Related technologies, Sources, and Reference. Rows intentionally link to canonical technical pages instead of duplicating their bodies or changing existing page identities. The original three news-derived pages are preserved, but excluded from the curated dashboard until they have worthwhile reference content.
 
-## Live collection and Gemini
+Briefings use a separate database with `Date` and one edition per publication day in **Asia/Seoul**. Entries link to the same persistent reference pages and sources; original source publication dates remain separate. A wiki-update edition is labelled a knowledge-update record, not falsely described as breaking news. Live selected news is summarized in Korean with source dates and links.
 
-Create a Gemini API key in Google AI Studio using a project with **no billing enabled** and free-tier access. Never enable billing for this project. Free-tier availability, model access, and quotas vary by region/account and may change; this application cannot inspect your billing status. It stops on quota/access errors instead of switching providers or paid models. It uses no Google Search grounding or other paid tools.
+**Calendar setup:** open Daily Briefing → 한국어 일일 AI 브리핑 → **+ Add view → Calendar → Date**. The API can create the database/date property but cannot configure that view. Notion API readback validates stored Mermaid blocks; browser diagram rendering and public sharing are not independently verified.
 
-Provide `GEMINI_API_KEY` securely through your shell or environment settings, never in source code, command arguments, logs, or chat. `.env.example` lists names only; `.env` files are **not automatically loaded**. Optional `GEMINI_MODEL` defaults to `gemini-3.5-flash-lite`; choose only a model available on your account's free tier. `GITHUB_TOKEN` is optional for public repository search; it may improve rate limits.
+Sync only changes agent-owned blocks. Manual/unknown blocks are retained. A repeated unchanged sync makes no writes. Cross-system exactly-once writes are not guaranteed: after an ambiguous remote timeout, inspect Notion before retrying. A crash between a successful write and local ID persistence can leave an orphan. Keep database backups. Archive status is reversible; generated index rows show Archived and the dashboard stops featuring them. Foundational references do not expire merely because there was no recent news.
+
+## Strict zero-cost Gemini
+
+Use only an API key whose project has **Cloud Billing disabled**. The user confirmed that fact for the current key; the API key cannot itself prove billing status. The application never enables billing, upgrades a tier, uses a paid fallback, or changes providers.
+
+Live generation has a fail-closed gate:
+
+1. `GEMINI_BILLING_DISABLED=true` explicitly acknowledges the key project's billing state.
+2. Fetch Google's [official pricing](https://ai.google.dev/gemini-api/docs/pricing) and verify the **exact model's Standard table** explicitly lists Free Tier input and output as **Free of charge**.
+3. Persist pricing URL/hash/time and reserve conservative request/token budgets before POST.
+4. Record actual `usageMetadata`; any request failure/quota error stops this invocation without automatic POST retries or model switching.
+
+Default model: `gemini-3.5-flash-lite`, whose Standard free-tier eligibility was actually verified during the sprint. Eligibility is rechecked per process, never inferred from API-key presence or model listing. Default per-invocation limits are **2 requests, 6,000 estimated input tokens/request, 3,000 output tokens/request, 12,000 reserved total tokens**. Serialized UTF-8 bytes plus overhead deliberately overestimate input tokens. Hard configurable ceilings in the budget constructor are 3 requests, 12,000 input, 4,000 output, 20,000 total. No grounding/search tools, caching service, Batch API, or paid-only features are invoked. Free-tier quotas/privacy terms are account- and region-dependent; public official sources are used in the demo.
 
 ```bash
-ai-radar --db var/live.sqlite3 run --mode live --limit 3
-ai-radar --db var/live.sqlite3 run --mode live \
-  --rss https://huggingface.co/blog/feed.xml \
-  --arxiv-query 'cat:cs.AI OR cat:cs.CL' \
-  --github-query 'topic:llm' --limit 2
+# Set credentials securely in your environment first, then:
+export GEMINI_BILLING_DISABLED=true
+ai-radar --db var/radar.sqlite3 run --mode live --limit 1 --sync-notion
+# Enrich one existing selected reference with retrieved source evidence:
+ai-radar --db var/radar.sqlite3 enrich 5
+ai-radar --db var/radar.sqlite3 workspace-sync
 ```
 
-RSS defaults to the Hugging Face blog; repeat `--rss` to select multiple feeds. `--limit` applies to **each** collector, not the total. GitHub collects repository metadata sorted by recent updates, not commits/issues or a complete news stream. arXiv collects recent matching papers. RSS 2.0 and basic Atom feeds are supported. No article scraping is performed. Source text is bounded before reasoning, and retrieved candidate summaries are supplied to Gemini. Generated decisions are validated: Update must reference a retrieved existing topic; malformed responses fail visibly. Source content is untrusted and never executed.
+Use the correct local topic ID from `topics`/`search` for enrichment. `enrich` drafts require structural and citation validation; they are marked as model drafts, and code is not automatically executed. Budgets may stop a long prompt; do not increase limits blindly. At the local request cap, a batch pauses with `pending_sources` and can publish completed changes; remaining sources wait for a later explicit run. An API quota error or unsafe token estimate stops with no fallback. Failures retain committed decisions. All paused/pending states are inspectable in SQLite.
 
-HTTPS destinations for live mode:
+Required destinations: `ai.google.dev`, `generativelanguage.googleapis.com`, `api.notion.com`, `huggingface.co` (default RSS), `export.arxiv.org`, `api.github.com`, and `raw.githubusercontent.com` for official reference seeds. Keep the managed proxy and TLS verification enabled. The environment draft adds pricing access and the billing-disabled acknowledgement; saving a draft is separate from applying/publishing it.
 
-- `huggingface.co` (or your chosen RSS host)
-- `export.arxiv.org`
-- `api.github.com`
-- `generativelanguage.googleapis.com`
-- `api.notion.com` for optional publishing
+## Discovery, ranking, and retrieval
 
-An environment proxy must allow these destinations. TLS verification remains enabled and credential-bearing redirects are rejected. HTTP GET requests retry transient failures up to three attempts; writes do not automatically retry because remote mutations can be ambiguous. Gemini 429 responses stop the run: wait for quota recovery and rerun; completed source transactions are retained. No silent fallback to fixtures occurs in live mode.
+Collection is separate from editorial selection. Source adapters fetch RSS/Atom, arXiv metadata and public GitHub repository metadata; bootstrap fetches official docs and original paper metadata. Raw records are bounded/preserved, HTML scripts are excluded from normalized text, known timestamps normalize to UTC, and unknown dates remain unknown. Sources deduplicate by kind/external identity/original content hash, preserving changed versions. GitHub search is not a full release/commit/news crawler; no full-article scraping is claimed.
 
-## Notion publishing (explicit opt-in)
-
-Create a Notion integration with read/insert/update content capabilities, then share a parent **page** with it. Supply `NOTION_TOKEN` and `NOTION_PARENT_PAGE_ID` through environment variables. This uses standard child pages, so a Notion database schema is not required. A free Notion workspace is sufficient for this design.
+Ranking uses technical relevance **30%**, foundational importance **25%**, practical utility **20%**, novelty **8%**, credibility **12%**, freshness **5%**. These are transparent heuristic proxies, not calibrated judgments of research quality. Source credibility is a provenance signal, not proof that claims are true. Maturity is an explicit editorial label, not an automatically validated readiness measure; no calibrated momentum predictor is claimed. Novelty distinguishes previously seen source identities; it is not a semantic discovery score. Redundancy uses source hashes, aliases and existing topic retrieval. Source selection and topic selection store scores, factors, and explanations independently.
 
 ```bash
-ai-radar --db var/live.sqlite3 sync
-# Or synchronize after a successful collection run:
-ai-radar --db var/live.sqlite3 run --mode live --sync-notion --limit 2
+# Optional JSON array of interests; optional JSON object of the six weights, summing to 1:
+ai-radar --db var/radar.sqlite3 --interests examples/interests.json \
+  --ranking-weights examples/weights.json run --mode live --limit 1
 ```
 
-Publishing is never enabled by default. Using `sync` on a sample database explicitly publishes fictional sample pages. The agent persists each remote page ID and its own summary block ID, then updates that block in place. Other manually added blocks are preserved. Pending updates survive failures and can be retried with `sync`. Local stale topics archive remotely using Notion's reversible `archived` flag; new evidence reactivates them. Archived topics that have never been published remain local.
+SQLite FTS5 indexes overlapping source chunks and conceptual topic text. Exact identity/aliases are tried first; BM25 ranks lexical matches. Strict document term conjunction is preferred, with a broader fallback. Code examples are excluded from the topic index to avoid irrelevant matches. Source IDs, URLs, excerpt positions and historical decisions accompany retrieval. Retrieved excerpts are supplied to the Gemini classifier; enrichment uses persisted related source evidence and existing text. No embedding model/vector database is claimed. Korean morphology and ambiguous terms remain limitations.
 
-**Remote write limitation:** Notion has no cross-system transaction with SQLite. A timeout or crash after a successful page/block write but before its ID is persisted can leave an orphan/duplicate page or block on retry. Inspect Notion after ambiguous write failures before retrying. Do not delete the local database if you want to preserve remote identities. External deletion of an agent-owned page/block requires manual reconciliation; the agent does not silently overwrite a replacement.
+The deterministic planner selects/rejects, retrieves, checks evidence sufficiency, makes at most one additional local retrieval when needed, and pauses for evidence/review instead of inventing missing facts. A numeric red-flag check detects unsupported quantities; it does **not** prove semantic entailment. Unknown concepts are not promoted to full reference pages solely because a model produced one news paragraph.
 
-## Storage, ranking, and archiving
+## Operation and evidence
 
-SQLite tables: `sources` (versioned raw evidence), `topics` (current summaries and Notion identities), `relationships` (evidence-to-topic links), `history` (decisions and before/after topic snapshots for Create/Update), and `runs` (execution status and decision counts). Each decision, its relationship, its history, and source completion marker commit atomically. Failed items remain pending for the next successful collection run. Failed live collection leaves previously stored data intact.
+Optional local scheduling: append `--interval 3600` to `run`. One foreground process only per database; no distributed locking or automatic daemon installation. The request budget spans the entire invocation, including loop iterations, so quota limits are not bypassed by a scheduler. GETs have bounded backoff; writes are not automatically retried. Notion publishing is paced. HTTP logs contain only service/method/status/timing; no tokens or remote error bodies.
 
-Retrieval uses lexical token overlap against existing names/summaries, including archived topics, with a top-five candidate limit. This is a transparent baseline, not semantic embedding search. Ranking is:
+Local `var/` contains SQLite data, rotating logs, usage reservations/actual usage, selection explanations and workflow events. Before additive Wiki migration, a `.pre-wiki-v1.bak` SQLite backup is created without overwriting an existing one. This is a version-2 additive migration, not a generic migration framework.
 
-```text
-(evidence_count + 2 × distinct_source_kinds) / (1 + days_since_last_evidence / 30)
-```
-
-Evidence count includes source revisions. It measures observed support, not scientific quality or independent corroboration. Topics inactive for 90 days are marked archived, logged in history, and retained with all evidence. `--archive-days N` changes that threshold. Archive age uses local last processing time, not publication date. `topics` shows archived topics too. No destructive cleanup is implemented.
-
-## Scheduling and logs
-
-```bash
-ai-radar --db var/live.sqlite3 run --mode live --limit 1 --interval 3600
-```
-
-This optional foreground loop runs immediately and then waits the specified seconds after each successful run (minimum 60). Ctrl-C stops it. A failure exits nonzero; use a local process supervisor or cron for retries. Run only **one writer/scheduler per database**. Avoid overlapping cron jobs. No background daemon is installed.
-
-`var/radar.log` rotates at 1 MB with three backups. Logs record run/source IDs and decisions, never tokens or raw external responses. SQLite `runs` records processing successes and failures; collection and Notion failures appear in the file log/CLI, outside the processing run transaction. Database contents include source text and generated summaries: treat local files as private if your configured sources are private. Shell tracing should remain disabled when handling credentials.
-
-## Validation and limitations
-
-Run `python -m unittest discover -s tests -v`. Tests cover the labelled fixture decisions, ranking, evidence relationships, repeated runs, source revisions, persistent storage, reversible archival, failed-decision recovery, RSS/Atom/arXiv/GitHub parsing, Gemini output rejection, Notion create/update/archive/retry state, CLI behavior, and execution logs. CI runs offline tests and a sample pipeline.
-
-See [VALIDATION.md](VALIDATION.md) for the actual execution report. Mock adapter tests verify request/response handling; they do **not** prove external service access or output quality. The small offline evaluation is a regression fixture, not a production accuracy benchmark. Real-world relevance, duplicate-topic rates, and summary factuality need a larger curated dataset. There is no embedding index, full-text article ingestion, distributed execution, UI, or automatic schema migration. Back up the database before future schema changes.
-
-Repository implementation is modular:
-
-| Module | Responsibility |
-| --- | --- |
-| `collectors.py` | RSS / Atom, arXiv, GitHub and fixed samples |
-| `intelligence.py` | Deterministic baseline and validated Gemini decisions |
-| `store.py` | SQLite evidence, lexical retrieval, history, ranking, archival |
-| `pipeline.py` | Transactional decision orchestration and run tracking |
-| `notion.py` | Pending page/block synchronization |
-| `http.py` | Bounded, verified-TLS transport and sanitized failures |
-| `cli.py` | Commands, credential selection, rotating logs, local scheduling |
+An explicit `run --mode sample` remains an offline fixture demonstration; it is never used as live proof. See [VALIDATION.md](VALIDATION.md), [EVALUATION.md](EVALUATION.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DECISIONS.md](DECISIONS.md), and [ENGINEERING_WALKTHROUGH.md](ENGINEERING_WALKTHROUGH.md) for measured results and limitations. This is a tested local integration, not a production-readiness claim.

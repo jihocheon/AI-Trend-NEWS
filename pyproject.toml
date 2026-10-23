@@ -16,4 +16,5 @@ ai-radar = "radar.cli:main"
 include = ["radar*"]
 
 [tool.setuptools.package-data]
-radar = ["sample.json"]
+radar = ["sample.json", "data/*.json"]
+# Curated starter notes are engineering references, separate from sample news.

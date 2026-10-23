@@ -1,6 +1,6 @@
 # Execution report
 
-**Latest status: live integration succeeded after publication.** Three real sources were processed by Gemini, three Notion pages were created and read back, and an identical second run created no duplicates. See the final section for evidence; earlier blockers below are historical.
+**Latest status: curated reference architecture, real guarded MCP Update, and Notion navigation verified; 35 regression tests pass.** See the final sprint section. Earlier network/model blockers and news-only runs remain historical evidence.
 
 Validated on 2026-10-24 (Asia/Seoul), Python 3.12.14, Linux.
 
@@ -93,3 +93,62 @@ For each page, authenticated Notion GET requests confirmed the stored page ID, c
 ### Remaining limitations
 
 No network or credential blocker remains for the tested paths. Live Notion archival/reactivation and updates from new evidence were not separately exercised in this small run; they remain covered by mocked tests. No production accuracy benchmark, anonymous URL access test, account billing-status audit, or crash-window duplicate recovery test was performed. No credentials were exposed, no paid services were enabled, and no billing settings were changed.
+
+## Curated knowledge sprint — latest verified state (2026-10-24, Asia/Seoul)
+
+The product now preserves **two equal interfaces**: a curated, revisitable AI engineering reference collection and a Korean date-based AI briefing. It does not aim for encyclopedia coverage or a page-count target. Earlier news-only results above are historical.
+
+### Implementation and tests
+
+- Reused the original collectors, source/version/history store, safe transport and original Notion identities.
+- Added source normalization with bounded raw preservation, aliases/canonical identity, independent technical bodies/revisions, source/topic relationships, explainable configurable relevance, FTS5 chunks and history, conditional bounded research traces, token/request reservation and actual usage tracking.
+- Added five real Notion areas, a reference **metadata database pointing to canonical bodies**, and a separate Date-property briefing database. Existing page identities and original manual/summary content were retained.
+- **35 deterministic tests pass**, none skipped. Built and installed the wheel into a separate virtual environment; real-corpus FTS retrieval and packaged reference data passed outside the checkout. Three trusted Python examples execute successfully. A malformed pricing-section assumption was fixed against Google's actual nested Standard table before generation; exact-model free input/output checks fail closed.
+- Measured retrieval: topic Hit@1 **6/6**, MRR@3 **1.0**, source-document Precision@1 **2/3**, irrelevant-query topic results **0**. The remaining document-ranking error is recorded in EVALUATION.md; it is not hidden by a passing label.
+
+### Real source-grounded references and navigation
+
+Three selected Korean reference bodies were published from curated official-source engineering notes, **not sample data and not falsely labelled Gemini-generated**:
+
+| Canonical reference | Verified Notion URL | Technical body |
+| --- | --- | --- |
+| LLM architecture | https://app.notion.com/p/LLM-4028ad41fcfc81bb81a0d92d00f87495 | 3,072 characters at readback, 10 headings, Mermaid + Python |
+| RAG | https://app.notion.com/p/RAG-4028ad41fcfc8192b8cccdae7704b3da | 3,004 characters, 10 headings, Mermaid + Python |
+| Agent harness / orchestration / MCP | https://app.notion.com/p/MCP-4028ad41fcfc8163b4f9deb796728f2e | 3,322 characters after real new evidence, 11 headings, Mermaid + Python |
+
+Authenticated reads verified eight meaningful technical sections for these complex topics, stored code/diagram content and language, original source citations, related-page mentions, Home/Wiki/Daily navigation, and stable canonical identities. Mermaid was accepted and returned by Notion; no browser screenshot/visual-rendering claim is made. Concise future references need not duplicate this section count.
+
+- Home: https://app.notion.com/p/Home-Dashboard-AI-4028ad41fcfc81069884d64b437ee91b
+- Wiki navigation: https://app.notion.com/p/Technology-Wiki-4028ad41fcfc8194b6fcc07f16734f8a
+- Reference database: https://app.notion.com/p/4028ad41fcfc81b3bf98d648823c15e7 — three metadata rows with categories, relevance, date, status, related technologies, evidence count and canonical page URLs. These rows intentionally do not duplicate technical bodies.
+- Daily area: https://app.notion.com/p/Daily-Briefing-4028ad41fcfc81b29c2ada1cbea74717
+- Dated Korean edition: https://app.notion.com/p/2026-10-24-AI-4028ad41fcfc81b8ae72c66d70b4080e
+- Research sources: https://app.notion.com/p/Research-Sources-4028ad41fcfc8197ba4bfa62e31055c5
+- Radar: https://app.notion.com/p/Technology-Radar-4028ad41fcfc810f9cc4cf7dacb03fbd
+
+The dated edition has a real Date property, three knowledge-update records plus one real MCP source-review change, and four mentions linking three persistent Wiki references. Its latest source-review explanation separates what was reviewed, why it matters, background mechanism, practical implications and unknown source publication date. No claim is made that an undated schema was released today. The API cannot create the Calendar view: Daily Briefing → 한국어 일일 AI 브리핑 → **+ Add view → Calendar → Date** is the one manual setup action.
+
+### Actual guarded Gemini inference and safe rerun
+
+Initial pricing access was denied; it later became reachable. Google's official pricing page explicitly listed **gemini-3.5-flash-lite Standard Free Tier input/output = Free of charge**. Verified the exact section/table before inference and retained URL/hash/time in `generation_usage.pricing_proof`. The user confirmed billing is disabled for the key's project. No billing configuration was changed.
+
+Fetched real official MCP schema source, persisted as source **9**, and retrieved topic **6** plus source chunk **43**. The real run (**6**) traversed PLANNING → RETRIEVED → READY_TO_INFER → INFERENCING → EVALUATED → COMPLETED and returned **Create=0, Update=1, Skip=0**. It updated the existing harness/MCP identity, added a source relationship/history record, preserved the enduring body, and published recent evidence plus briefing content.
+
+One-request policy: input upper bound 9,000, output ceiling 3,000, total reservation ceiling 12,000. Actual request output cap was 2,048. Reserved **5,919** conservative tokens; provider usage **740 input + 162 output = 902 total**. Processing took **2.005 seconds**. No paid fallback, provider switch or quota bypass occurred. Model/pricing presence without these checks would not be accepted as proof of free operation.
+
+Refetched the same real source and checked the full original content hash before rerunning. The repeated source pipeline produced **0/0/0**, unchanged history and zero new generation attempts. Following Notion sync made zero writes: transport counters **4 reads, 0 errors, 0 write attempts**. A separate remote readback + repeat sync check made **22 reads, 0 errors, 0 writes** in **8.60 seconds**. All three original pages and original summary blocks were checked against the pre-Wiki backup and preserved. These are small observations, not production reliability statistics.
+
+### Reproduce and remaining boundaries
+
+```bash
+python -m unittest discover -s tests -v
+python -m radar.evaluate --db var/live-integration.sqlite3
+python scripts/verify_notion.py --db var/live-integration.sqlite3 \
+  --legacy-backup var/pre-wiki-backup.sqlite3
+```
+
+Local actual artifacts: `var/guarded-live-result.json`, `var/current-duplicate-result.json`, `var/wiki-validation.json`, `var/retrieval-evaluation.json`, pricing snapshot/proof and the SQLite state/selection/usage/history tables. These files contain no API credential values.
+
+Live verified: official collection, source-backed Korean starter publishing, an existing-topic Gemini Update, evidence/briefing integration, navigation/database/date readback, legacy preservation and unchanged-repeat safety. Tested deterministically rather than newly live: sparse-evidence retry/wait/recovery, malformed output/unsupported quantity rejection, quota exhaustion, and adaptive full-reference Gemini enrichment. Numeric/citation checks do not establish semantic factuality. No load test, distributed locking, automatic cross-system crash reconciliation, or anonymous-sharing validation was performed. Single-process operation remains required.
+
+The environment draft saves pricing-host access and the nonsecret `GEMINI_BILLING_DISABLED=true` acknowledgement for review/publishing; a saved draft is not proof of a new published snapshot. Actual pricing/generation worked in this running instance. Model eligibility is rechecked for future invocations, and unverified/changed pricing stops generation.

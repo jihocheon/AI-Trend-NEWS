@@ -10,7 +10,7 @@ def utcnow():
 
 
 def tokens(text):
-    return set(re.findall(r"[a-z0-9]{3,}", text.lower())) - {"the", "and", "with", "for", "from", "that"}
+    return set(re.findall(r"[a-z0-9가-힣]{2,}", text.lower())) - {"the", "and", "with", "for", "from", "that"}
 
 
 class Store:
@@ -24,6 +24,9 @@ class Store:
           id INTEGER PRIMARY KEY, kind TEXT NOT NULL, external_id TEXT NOT NULL,
           title TEXT, url TEXT, text TEXT, published TEXT, content_hash TEXT NOT NULL, processed INTEGER DEFAULT 0,
           UNIQUE(kind, external_id, content_hash));
+        CREATE TABLE IF NOT EXISTS raw_sources (
+          content_hash TEXT PRIMARY KEY,kind TEXT,external_id TEXT,raw_json TEXT,
+          truncated INTEGER NOT NULL DEFAULT 0,collected_at TEXT);
         CREATE TABLE IF NOT EXISTS topics (
           id INTEGER PRIMARY KEY, name TEXT NOT NULL, category TEXT, summary TEXT,
           updated_at TEXT NOT NULL, archived INTEGER DEFAULT 0, score REAL DEFAULT 0,
@@ -44,13 +47,20 @@ class Store:
 
     def ingest(self, sources):
         with self.db:
-            for s in sources:
+            for original in sources:
+                raw=json.dumps(original.__dict__,ensure_ascii=False)
+                digest=hashlib.sha256(raw.encode()).hexdigest()
+                self.db.execute('INSERT OR IGNORE INTO raw_sources VALUES (?,?,?,?,?,?)',
+                  (digest,original.kind,original.external_id,raw[:64000],int(len(raw)>64000),utcnow()))
+                from .preparation import normalize
+                try:s=normalize(original)
+                except ValueError:continue
                 if not s.external_id or not s.title:
                     continue
                 self.db.execute('''INSERT OR IGNORE INTO sources
                   (kind,external_id,title,url,text,published,content_hash) VALUES (?,?,?,?,?,?,?)''',
                   (s.kind, s.external_id, s.title, s.url, s.text[:20000], s.published,
-                   hashlib.sha256(json.dumps([s.title, s.url, s.text, s.published]).encode()).hexdigest()))
+                   hashlib.sha256(json.dumps([original.title, original.url, original.text, original.published]).encode()).hexdigest()))
 
     def topics(self):
         return [dict(r) for r in self.db.execute("SELECT * FROM topics ORDER BY score DESC,id")]
@@ -59,8 +69,11 @@ class Store:
         query = tokens(source.title + " " + source.text)
         ranked = []
         for topic in self.topics():
-            terms = tokens(topic["name"] + " " + topic["summary"])
+            terms = tokens(topic["name"] + " " + topic["summary"] + " " + topic.get("aliases_json", "") + " " + topic.get("wiki_json", ""))
             similarity = len(query & terms) / max(1, len(query | terms))
+            if source.url in [r[0] for r in self.db.execute(
+                'SELECT s.url FROM sources s JOIN relationships r ON s.id=r.source_id WHERE r.topic_id=?',(topic['id'],))]:
+                similarity=max(similarity,0.95)
             if similarity:
                 ranked.append({**topic, "similarity": similarity})
         return sorted(ranked, key=lambda x: (-x["similarity"], x["id"]))[:limit]
@@ -83,6 +96,12 @@ class Store:
                 self.db.execute('''UPDATE topics SET summary=?,category=?,updated_at=?,archived=0,
                   sync_pending=1 WHERE id=?''', (a.summary, a.category, now, topic_id))
             elif a.decision == "Create":
+                from .knowledge import resolve
+                if 'canonical_key' in {r[1] for r in self.db.execute('PRAGMA table_info(topics)')}:
+                    existing_id=resolve(self,a.topic)
+                    if existing_id:
+                        from dataclasses import replace
+                        return self.apply(source_id,replace(a,decision='Update',target_id=existing_id),now)
                 topic_id = self.db.execute('''INSERT INTO topics(name,category,summary,updated_at)
                   VALUES (?,?,?,?)''', (a.topic, a.category, a.summary, now)).lastrowid
             if topic_id:
@@ -93,6 +112,7 @@ class Store:
                 json.dumps(dict(before)) if before else None,
                 json.dumps(dict(after)) if after else None, now))
             self.db.execute("UPDATE sources SET processed=1 WHERE id=?", (source_id,))
+            return a.decision
 
     def rank_and_archive(self, now, archive_days=90):
         stamp = datetime.fromisoformat(now)
@@ -103,7 +123,7 @@ class Store:
                   FROM relationships r JOIN sources s ON s.id=r.source_id WHERE r.topic_id=?''', (t["id"],)).fetchone()
                 score = round((count + 2 * diversity) / (1 + age / 30), 4)
                 self.db.execute("UPDATE topics SET score=? WHERE id=?", (score, t["id"]))
-                if age >= archive_days and not t["archived"]:
+                if age >= archive_days and not t["archived"] and not t.get("foundational", 0):
                     self.db.execute("UPDATE topics SET archived=1,sync_pending=1 WHERE id=?", (t["id"],))
                     self.db.execute('''INSERT INTO history(topic_id,action,reason,created_at)
                       VALUES (?,'Archive','Inactive beyond retention window',?)''', (t["id"], now))

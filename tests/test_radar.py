@@ -34,6 +34,12 @@ class FakeHTTP:
         return response
 
 
+class FakeBudget:
+    model='gemini-3.5-flash-lite'
+    def reserve(self,*args):return 1
+    def finish(self,*args,**kwargs):pass
+
+
 def gemini_reply(**overrides):
     raw = dict(topic="AI agents", category="Agents", summary="Tools and planning", decision="Create",
                target_id=None, reason="Relevant")
@@ -129,7 +135,7 @@ class AdapterTests(unittest.TestCase):
 
     def test_gemini_decision(self):
         http = FakeHTTP([gemini_reply()])
-        decision = GeminiReasoner(http, "test-only").analyze(collectors.sample()[0], [])
+        decision = GeminiReasoner(http, "test-only", policy=FakeBudget()).analyze(collectors.sample()[0], [])
         self.assertEqual(decision.decision, "Create")
         self.assertIn("/models/gemini-3.5-flash-lite:generateContent", http.calls[0][1])
         self.assertIn("x-goog-api-key", http.calls[0][2]["headers"])
@@ -143,7 +149,7 @@ class AdapterTests(unittest.TestCase):
         for reply in [gemini_reply(decision="Update", target_id=999), gemini_reply(summary=""),
                       gemini_reply(decision="Delete"), {"candidates": []}]:
             with self.subTest(reply=reply), self.assertRaises(IntegrationError):
-                GeminiReasoner(FakeHTTP([reply]), "test-only").analyze(collectors.sample()[0], [])
+                GeminiReasoner(FakeHTTP([reply]), "test-only", policy=FakeBudget()).analyze(collectors.sample()[0], [])
 
     def test_notion_create_update_archive_and_noop(self):
         store = Store(":memory:")

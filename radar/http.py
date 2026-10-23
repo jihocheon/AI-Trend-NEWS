@@ -1,8 +1,10 @@
 """Small verified-TLS HTTP client. Never log headers, URLs, or remote error bodies."""
 import json
+import logging
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 
 
 class IntegrationError(RuntimeError):
@@ -23,20 +25,35 @@ class HTTP:
         if body is not None:
             request_headers["Content-Type"] = "application/json"
         for attempt in range(3):
+            if not hasattr(self,'metrics'):
+                self.metrics={'requests':0,'errors':0,'notion_write_attempts':0,'gemini_generation_attempts':0,'latency_ms':0.0}
+            self.metrics['requests']+=1
+            service=urlparse(url).hostname
+            if service=='api.notion.com' and method!='GET' and not url.endswith('/query'):
+                self.metrics['notion_write_attempts']+=1
+            if service=='generativelanguage.googleapis.com' and method=='POST':
+                self.metrics['gemini_generation_attempts']+=1
+            started=time.perf_counter()
             try:
                 req = urllib.request.Request(url, body, request_headers, method=method)
                 with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as response:
                     raw = response.read(4_000_001)
                     if len(raw) > 4_000_000:
                         raise IntegrationError("External response exceeded 4 MB limit")
+                    elapsed=(time.perf_counter()-started)*1000
+                    self.metrics['latency_ms']+=elapsed
+                    logging.getLogger('radar').info(json.dumps({'event':'http','service':service,'method':method,'status':response.status,'latency_ms':round(elapsed,2),'attempt':attempt+1}))
                     return raw
             except urllib.error.HTTPError as exc:
+                self.metrics['errors']+=1
+                logging.getLogger('radar').warning(json.dumps({'event':'http_error','service':service,'method':method,'status':exc.code,'attempt':attempt+1}))
                 # Retry reads only: retrying writes can create duplicate pages.
                 if method == "GET" and exc.code in (429, 500, 502, 503, 504) and attempt < 2:
                     time.sleep(2 ** attempt)
                     continue
                 raise IntegrationError(f"External HTTP request failed (status {exc.code})") from None
             except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                self.metrics['errors']+=1
                 if "Tunnel connection failed: 403" in str(getattr(exc, "reason", "")):
                     raise IntegrationError("Network proxy denied destination (403); check the environment allowlist") from None
                 raise IntegrationError("External request failed: network or TLS error") from None
