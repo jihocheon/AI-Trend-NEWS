@@ -1,0 +1,10 @@
+{
+  "description": "Synthetic, fixed source snippets for offline retrieval regression only; never evidence of live service access or retrieval accuracy on real originals.",
+  "responses": {
+    "https://raw.githubusercontent.com/huggingface/transformers/main/docs/source/en/llm_tutorial.md": "Causal language model tutorial. A causal language model predicts the next token from preceding tokens. Tokenization, attention masks, generation and KV cache are engineering concerns.",
+    "https://raw.githubusercontent.com/facebookresearch/faiss/main/README.md": "FAISS supports similarity search and clustering of dense vectors. Similarity search clustering vectors are relevant to retrieval indexes. Index types trade accuracy, memory, and latency.",
+    "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/README.md": "Model Context Protocol connects hosts and clients to servers exposing tools and resources. The Model Context Protocol specification defines structured messages and interfaces.",
+    "https://export.arxiv.org/api/query?id_list=1706.03762": "<feed xmlns=\"http://www.w3.org/2005/Atom\"><entry><title>Attention architecture fixture</title><summary>This fixed fixture concerns attention architectures and sequence representations.</summary><published>2017-06-12T00:00:00Z</published></entry></feed>",
+    "https://export.arxiv.org/api/query?id_list=2005.11401": "<feed xmlns=\"http://www.w3.org/2005/Atom\"><entry><title>Retrieval augmented generation fixture</title><summary>This fixed fixture concerns retrieval of evidence for grounded answers.</summary><published>2020-05-22T00:00:00Z</published></entry></feed>"
+  }
+}

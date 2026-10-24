@@ -1,5 +1,7 @@
 # AI Technology Radar
 
+[![Tests](https://github.com/jihocheon/AI-Trend-NEWS/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/jihocheon/AI-Trend-NEWS/actions/workflows/tests.yml)
+
 A local-first, curated AI engineering reference collection **and** a Korean AI trends briefing, powered by the same sources, topic identities, retrieval, and relevance ranking. This is neither a page-count generator nor an exhaustive AI encyclopedia.
 
 It selects worthwhile technologies, retrieves existing knowledge before decisions, preserves evergreen explanations, and records what changed separately. Strong interests include LLMs, agent harnesses, orchestration, MCP, RAG, inference and evaluation; adjacent discoveries remain eligible.
@@ -90,3 +92,10 @@ Optional local scheduling: append `--interval 3600` to `run`. One foreground pro
 Local `var/` contains SQLite data, rotating logs, usage reservations/actual usage, selection explanations and workflow events. Before additive Wiki migration, a `.pre-wiki-v1.bak` SQLite backup is created without overwriting an existing one. This is a version-2 additive migration, not a generic migration framework.
 
 An explicit `run --mode sample` remains an offline fixture demonstration; it is never used as live proof. See [VALIDATION.md](VALIDATION.md), [EVALUATION.md](EVALUATION.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DECISIONS.md](DECISIONS.md), and [ENGINEERING_WALKTHROUGH.md](ENGINEERING_WALKTHROUGH.md) for measured results and limitations. This is a tested local integration, not a production-readiness claim.
+
+
+## Continuous integration
+
+The existing [Tests workflow](.github/workflows/tests.yml) runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. GitHub-hosted Ubuntu with Python 3.12 creates a clean virtual environment, installs the project, runs `python -m pip check`, executes **all regression tests** (zero tests or skipped outcomes fail the gate), evaluates retrieval against an isolated fixture-backed SQLite database, and smoke-tests the installed CLI outside the checkout including an unchanged rerun.
+
+Checks run with Python network operations blocked and live API credentials empty. Dependency/action installation may use package registries; tests, evaluation, and smoke never call Gemini, Notion, or other live services and never open the production database. The evaluation uses explicitly synthetic source fixtures and enforced thresholds; it is not a new measurement of live retrieval quality. Actions are pinned to verified commit SHAs, permissions are `contents: read`, and the job has a 10-minute timeout. No Notion publishing, model generation, or deployment is part of CI.
