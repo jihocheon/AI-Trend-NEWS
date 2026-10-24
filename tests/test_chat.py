@@ -130,6 +130,14 @@ class CitationTests(unittest.TestCase):
 if __name__=='__main__':unittest.main()
 
 class RetrievalDetailTests(unittest.TestCase):
+    def test_full_names_and_ascii_boundaries(self):
+        with tempfile.TemporaryDirectory() as d:
+            s=knowledge(Path(d)/'knowledge.db')
+            found=retrieve_chat(s,'Compare retrieval-augmented generation and Model Context Protocol')
+            self.assertEqual(set(found['plan']['focus']),{'rag','agent-harness'})
+            self.assertEqual(understand('large language model',s.topics())['focus'],['llm-architecture'])
+            self.assertEqual(retrieve_chat(s,'Write a paragraph about gardening')['evidence'],[])
+            s.close()
     def test_latency_context_and_relationships_are_selected(self):
         with tempfile.TemporaryDirectory() as d:
             s=knowledge(Path(d)/'knowledge.db')

@@ -83,7 +83,7 @@ PYTHONPATH="$PWD/scripts/ci_offline" python scripts/ci_chat_evaluate.py
 
 The 12-question fixture includes Korean/English facts, comparisons, two follow-ups, paraphrases, ambiguity, no-evidence questions and a prompt-extraction attempt. Eight positive queries measured mean topic Recall@3 **0.6875 for baseline FTS → 1.0000 for chat expansion**. All four gap/safety cases avoided unrelated evidence. On the current real SQLite corpus, the same small labelled queries gave the same scores; mean comparison latency was **9.92 ms**, including both retrieval paths. This is an in-repository regression, not a held-out semantic benchmark.
 
-**58 automated tests passed**, zero skipped: the original 35 plus chat retrieval, memory, citations, source-instruction boundaries, redaction, quote/quantity/URL validation, conflicts, API/UI assets, local origin/host rules, quota behavior and shared-budget connection changes. CI installs optional extras, keeps all checks offline, runs both evaluation suites and smoke-tests the installed CLI and bundled web assets. Current Starlette emits an httpx TestClient deprecation warning; tests still pass and no warnings are misreported as skipped tests.
+**59 automated tests passed**, zero skipped: the original 35 plus chat retrieval, memory, citations, source-instruction boundaries, redaction, quote/quantity/URL validation, conflicts, API/UI assets, local origin/host rules, quota behavior and shared-budget connection changes. CI installs optional extras, keeps all checks offline, runs both evaluation suites and smoke-tests the installed CLI and bundled web assets. Current Starlette emits an httpx TestClient deprecation warning; tests still pass and no warnings are misreported as skipped tests.
 
 ### Actual Chromium/Gemini checks
 

@@ -88,7 +88,7 @@ PYTHONPATH="$PWD/scripts/ci_offline" python scripts/ci_chat_evaluate.py
 | Chat mean topic Recall@3 | 1.0000 | Same FTS with aliases, deterministic expansion and bounded focus memory |
 | Four gap/safety queries without unrelated evidence | 4/4 | Includes a pre-inference refusal; this is pipeline behavior, not pure FTS quality |
 | Mean comparison latency on real SQLite corpus | 9.92 ms | Includes both retrieval paths; tiny corpus, no LLM call |
-| Automated regression tests | 58 passed, 0 skipped | Original 35 retained plus 23 chat tests |
+| Automated regression tests | 59 passed, 0 skipped | Original 35 retained plus 24 chat tests |
 
 The identical labelled questions against the real persistent knowledge store gave the same recall values. Rules and labels are in-repository and close to the curated subjects; these are regression results, not held-out proof of semantic generalization. No vector database or embedding improvement is claimed.
 

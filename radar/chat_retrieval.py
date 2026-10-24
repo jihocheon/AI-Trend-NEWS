@@ -6,8 +6,8 @@ from .retrieval import retrieve
 
 SYNONYMS = {
     'rag': ('rag', '검색 증강', '검색증강', '근거를 찾아', '문서를 찾아', '문서 검색', '문서검색', '자료를 찾아', 'retrieval augmented', '사내 문서', 'retrieval', '색인', '검색 정확도', 'rerank', '벡터 검색'),
-    'agent-harness': ('mcp', '하네스', 'harness', '오케스트레이션', 'orchestration', '도구 호출', '도구호출', '에이전트', 'agent'),
-    'llm-architecture': ('llm', '트랜스포머', 'transformer', 'attention', '어텐션', 'kv cache', '다음 토큰', '다음 단어', '언어 모델', '언어모델'),
+    'agent-harness': ('mcp', '하네스', 'harness', '오케스트레이션', 'orchestration', '도구 호출', '도구호출', '에이전트', 'agent', 'agents', 'agentic', 'harnesses', 'model context protocol', 'modelcontextprotocol'),
+    'llm-architecture': ('llm', '트랜스포머', 'transformer', 'attention', '어텐션', 'kv cache', '다음 토큰', '다음 단어', '언어 모델', '언어모델', 'large language model', 'autoregressive', 'token prediction'),
 }
 FOLLOWUP = re.compile(r'그럼|그러면|그것|그거|둘|앞서|위에서|더 자세|이 경우|그 방식|\b(it|that|those|them|follow.up|what about)\b', re.I)
 OUTSIDE = re.compile(r'날씨|야구|축구|주가|운세|조리법|\b(weather|baseball|horoscope|recipe)\b', re.I)
@@ -36,18 +36,26 @@ def clip_bytes(text, limit):
     return text.encode()[:limit].decode('utf-8', errors='ignore')
 
 
+def term_matches(term,text):
+    term=term.lower()
+    if re.fullmatch(r'[a-z0-9][a-z0-9 /._-]*',term):
+        # ASCII boundaries retain Korean particles while rejecting 'rag' in 'paragraph'.
+        return bool(re.search(r'(?<![a-z0-9])'+re.escape(term)+r'(?![a-z0-9])',text))
+    return term in text
+
+
 def understand(question, topics, prior_focus=()):
     lower=question.lower()
     if OUTSIDE.search(lower):
         return {'query':question,'focus':[],'intent':'outside','followup':False}
     focus=[]
     for key, words in SYNONYMS.items():
-        if any(word in lower for word in words):focus.append(key)
+        if any(term_matches(word,lower) for word in words):focus.append(key)
     # Reuse current knowledge aliases for future technologies, rather than an exclusive catalog.
     for topic in topics:
         key=topic.get('canonical_key') or str(topic['id'])
         aliases=[topic['name'],*json.loads(topic.get('aliases_json','[]'))]
-        if any(len(a)>=3 and a.lower() in lower for a in aliases) and key not in focus:focus.append(key)
+        if any(len(a)>=3 and term_matches(a,lower) for a in aliases) and key not in focus:focus.append(key)
     followup=bool(prior_focus and (FOLLOWUP.search(question) or (not focus and len(question)<100 and re.search(r'장점|단점|한계|비용|예제|trade.off|implementation|limitation|latency',lower))))
     if followup:
         focus=list(dict.fromkeys([*focus,*prior_focus]))[:3]

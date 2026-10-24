@@ -159,7 +159,7 @@ Implemented an optional FastAPI/Uvicorn web chat over the existing store and FTS
 
 ### Automated/local checks
 
-- **58 regression tests passed, zero skipped**: the original 35 plus 23 chat retrieval, memory, citation, privacy, quota, conflict and web/API checks. Tests use explicit scripted generators/fixtures and are not live inference evidence.
+- **59 regression tests passed, zero skipped**: the original 35 plus 24 chat retrieval, memory, citation, privacy, quota, conflict and web/API checks. Tests use explicit scripted generators/fixtures and are not live inference evidence.
 - Existing deterministic evaluation remains; a separate 12-question chat regression improved mean positive-topic Recall@3 from **0.6875 to 1.0** and avoided unrelated evidence for all four negative/safety cases. The same labelled questions on the real database matched those scores. Mean real-corpus comparison latency: **9.92 ms**.
 - Installed web extras successfully; JavaScript syntax check passed. Actual Chromium desktop and 390px mobile rendering were inspected. Screenshots are retained under ignored `var/`.
 - API routes/asset loading, responsive layout, source cards, loading/error handling, reset and evidence-gap behavior were exercised in Chromium. An initial test harness string-evaluation wait was blocked by CSP; fixed the harness without weakening CSP. A too-fast error check hit the expected question-spacing limit; waiting the documented interval verified the local-budget error. No additional generation was used for these UI checks.
@@ -191,3 +191,6 @@ The existing Notion publisher completed a real unchanged sync: **3 GETs, 0 error
 CI installs the optional `chat,test` extras, runs all regressions under the network guard, runs both deterministic evaluations and checks installed CLI/bundled web assets without credentials. Actual post-push GitHub run conclusion is reported with delivery; local checks are not substituted for remote CI success.
 
 Known limits: hand-maintained paraphrase coverage, one compact prior turn, conservative 1..3-request server lifetime, no public-service authentication, incomplete latency answer, no semantic entailment/unsupported-claim benchmark, and limited project-implementation introspection. Full-reference curation generation is separate from chatbot tests. The pinned Starlette/httpx test transport emits a deprecation warning but no checks are skipped. See CHATBOT.md for full contracts and the independent/manual evaluation distinctions.
+
+
+Post-push CI confirmation: the initial chatbot implementation commit `7d2b571` triggered [Actions run 40069209166](https://github.com/jihocheon/AI-Trend-NEWS/actions/runs/40069209166), which completed successfully with all jobs/steps passing and 58 measured regression tests. A follow-up lexical-boundary/full-name regression brings the suite to 59 tests; its exact final run is checked at delivery. No live APIs or production database were used by CI.
