@@ -28,6 +28,14 @@ def main():
         second = command("run", "--mode", "sample")
         assert second == {"mode": "sample", "Create": 0, "Update": 0, "Skip": 0}, second
         assert db.is_file() and "decision=Update" in log.read_text()
+        from fastapi.testclient import TestClient
+        from radar.chat import ChatService
+        from radar.chat_web import create_app
+        with TestClient(create_app(ChatService(str(db))),base_url="http://localhost") as client:
+            assert client.get("/").status_code==200
+            assert client.get("/static/chat.js").status_code==200
+            assert client.get("/static/chat.css").status_code==200
+            assert client.get("/api/health").json()["knowledge_ready"]
         print("Installed CLI smoke passed: offline sample, persisted topics, unchanged rerun")
 
 

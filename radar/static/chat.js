@@ -1,0 +1,20 @@
+'use strict';
+let conversation = null;
+let pending = false;
+const byId = id => document.getElementById(id);
+const messages = byId('messages');
+function node(tag, text, cls) { const el = document.createElement(tag); if (text) el.textContent = text; if (cls) el.className = cls; return el; }
+function safeLink(label, url) { try { const parsed = new URL(url); if (!['https:', 'http:'].includes(parsed.protocol)) return node('span', label); const a = node('a', label); a.href = parsed.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; } catch { return node('span', label); } }
+function bubble(who) { const b = node('article', null, 'message ' + (who === '나' ? 'user' : 'assistant')); b.append(node('div', who, 'who')); messages.append(b); return b; }
+function render(data) { const b = bubble('AI 기술 레이더'); for (const s of data.segments) { b.append(node('span', s.label, 'label ' + s.kind)); b.append(node('p', s.text + (s.citations.length ? ' [' + s.citations.join(', ') + ']' : ''))); }
+ if (data.sources.length) { const details = node('details', null, 'sources'); details.append(node('summary', '사용한 근거 ' + data.sources.length + '개')); const list = node('ul'); for (const s of data.sources) { const li = node('li'); li.append(node('strong', '[' + s.id + '] ' + s.title)); const links = node('div'); if (s.notion_url) links.append(safeLink('기술 레퍼런스 ↗', s.notion_url)); if (s.source_url) links.append(safeLink('원문 ↗', s.source_url)); li.append(links, node('p', s.text, 'excerpt')); list.append(li); } details.append(list); b.append(details); } b.scrollIntoView({behavior:'smooth',block:'end'}); }
+async function health() { try { const r = await fetch('/api/health'); const d = await r.json(); byId('status').textContent = !d.knowledge_ready ? '지식 저장소 준비가 필요합니다.' : d.generation_configured ? (d.eligibility_verified ? '무료 자격 확인됨 · 남은 모델 요청 ' : '요청 시 무료 자격 확인 · 최대 모델 요청 ') + d.remaining_requests + '회' : '저장소 연결됨 · 무료 API 설정을 확인하세요.'; } catch { byId('status').textContent = '서버 연결을 확인해 주세요.'; } }
+byId('form').addEventListener('submit', async e => { e.preventDefault(); if (pending) return; const q = byId('question').value.trim(); if (!q) return; pending = true; byId('error').hidden = true; byId('loading').hidden = false; byId('send').disabled = true; byId('new').disabled = true; bubble('나').append(node('p', q)); byId('question').value = '';
+ const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 45000);
+ try { const r = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,conversation_id:conversation}),signal:controller.signal}); const d = await r.json(); if (!r.ok) { if (d.error?.code === 'session_expired') conversation = null; throw new Error(d.error?.message || '요청을 처리하지 못했습니다.'); } conversation = d.conversation_id; render(d); }
+ catch (err) { byId('error').textContent = err.name === 'AbortError' ? '응답 대기 시간이 지났습니다. 서버에서 처리가 끝났을 수 있으므로 자동 재시도하지 않습니다.' : err.message; byId('error').hidden = false; }
+ finally { clearTimeout(timeout); pending = false; byId('loading').hidden = true; byId('send').disabled = false; byId('new').disabled = false; byId('question').focus(); health(); } });
+byId('question').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); byId('form').requestSubmit(); } });
+byId('new').addEventListener('click', async () => { if (pending) return; if (conversation) { try { const r = await fetch('/api/conversations/' + encodeURIComponent(conversation), {method:'DELETE'}); if (!r.ok) throw new Error(); } catch { byId('error').textContent = '이전 대화를 지우지 못했습니다. 잠시 후 다시 시도하세요.'; byId('error').hidden = false; return; } } conversation = null; messages.replaceChildren(); byId('error').hidden = true; byId('question').focus(); health(); });
+for (const button of document.querySelectorAll('[data-question]')) button.addEventListener('click', () => { byId('question').value = button.dataset.question; byId('question').focus(); });
+health();

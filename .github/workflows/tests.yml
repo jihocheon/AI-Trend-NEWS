@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m venv "$RUNNER_TEMP/radar-ci-venv"
-          "$RUNNER_TEMP/radar-ci-venv/bin/python" -m pip install .
+          "$RUNNER_TEMP/radar-ci-venv/bin/python" -m pip install ".[chat,test]"
           echo "$RUNNER_TEMP/radar-ci-venv/bin" >> "$GITHUB_PATH"
 
       - name: Check installed dependencies
@@ -68,6 +68,12 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/scripts/ci_offline
         run: python scripts/ci_evaluate.py
+
+      - name: Evaluate conversational retrieval offline
+        timeout-minutes: 2
+        env:
+          PYTHONPATH: ${{ github.workspace }}/scripts/ci_offline
+        run: python scripts/ci_chat_evaluate.py
 
       - name: Smoke test installed CLI
         timeout-minutes: 2

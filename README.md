@@ -8,12 +8,12 @@ It selects worthwhile technologies, retrieves existing knowledge before decision
 
 ## Run locally
 
-Python 3.11+ with SQLite FTS5; no runtime packages or cloud deployment required.
+Python 3.11+ with SQLite FTS5. The core CLI uses the standard library; optional local chat uses FastAPI/Uvicorn. No cloud deployment required.
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e .
+python -m pip install -e '.[chat,test]'
 python -m unittest discover -s tests -v
 # Install three carefully selected Korean references from official originals; no Gemini:
 ai-radar --db var/radar.sqlite3 bootstrap
@@ -96,6 +96,22 @@ An explicit `run --mode sample` remains an offline fixture demonstration; it is 
 
 ## Continuous integration
 
-The existing [Tests workflow](.github/workflows/tests.yml) runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. GitHub-hosted Ubuntu with Python 3.12 creates a clean virtual environment, installs the project, runs `python -m pip check`, executes **all regression tests** (zero tests or skipped outcomes fail the gate), evaluates retrieval against an isolated fixture-backed SQLite database, and smoke-tests the installed CLI outside the checkout including an unchanged rerun.
+The existing [Tests workflow](.github/workflows/tests.yml) runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. GitHub-hosted Ubuntu with Python 3.12 creates a clean virtual environment, installs the project, runs `python -m pip check`, executes **all regression tests** (zero tests or skipped outcomes fail the gate), evaluates both knowledge and conversational retrieval against isolated fixture-backed SQLite databases, and smoke-tests the installed CLI outside the checkout including an unchanged rerun and packaged chat UI assets.
 
 Checks run with Python network operations blocked and live API credentials empty. Dependency/action installation may use package registries; tests, evaluation, and smoke never call Gemini, Notion, or other live services and never open the production database. The evaluation uses explicitly synthetic source fixtures and enforced thresholds; it is not a new measurement of live retrieval quality. Actions are pinned to verified commit SHAs, permissions are `contents: read`, and the job has a 10-minute timeout. No Notion publishing, model generation, or deployment is part of CI.
+
+
+## Conversational AI assistant
+
+The local Korean chat UI shares the existing SQLite knowledge base and FTS5 retrieval. It explains/comparisons across stored references and originals, supports bounded follow-ups, validates evidence identifiers and quotes, labels interpretation/general knowledge/uncertainty, and abstains when evidence is absent. It never publishes chat content to Notion.
+
+```bash
+python -m pip install -e '.[chat,test]'
+# Optional, read-only metadata refresh for canonical links:
+radar-chat refresh-links --db var/live-integration.sqlite3
+# Acknowledge only for a key whose project has billing disabled:
+export GEMINI_BILLING_DISABLED=true
+radar-chat serve --db var/live-integration.sqlite3 --port 8000 --max-requests 2
+```
+
+Open the address printed by the local server. All Gemini calls remain backend-only, require verified free pricing, and share a conservative process-wide budget. New conversations do not reset usage. No deployment URL or Notion dashboard link was invented. See [CHATBOT.md](CHATBOT.md) for architecture, actual browser/Gemini results, privacy, evaluation and limits.

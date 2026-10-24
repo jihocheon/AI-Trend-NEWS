@@ -152,3 +152,42 @@ Local actual artifacts: `var/guarded-live-result.json`, `var/current-duplicate-r
 Live verified: official collection, source-backed Korean starter publishing, an existing-topic Gemini Update, evidence/briefing integration, navigation/database/date readback, legacy preservation and unchanged-repeat safety. Tested deterministically rather than newly live: sparse-evidence retry/wait/recovery, malformed output/unsupported quantity rejection, quota exhaustion, and adaptive full-reference Gemini enrichment. Numeric/citation checks do not establish semantic factuality. No load test, distributed locking, automatic cross-system crash reconciliation, or anonymous-sharing validation was performed. Single-process operation remains required.
 
 The environment draft saves pricing-host access and the nonsecret `GEMINI_BILLING_DISABLED=true` acknowledgement for review/publishing; a saved draft is not proof of a new published snapshot. Actual pricing/generation worked in this running instance. Model eligibility is rechecked for future invocations, and unverified/changed pricing stops generation.
+
+## Conversational assistant — actual validation (2026-10-24, Asia/Seoul)
+
+Implemented an optional FastAPI/Uvicorn web chat over the existing store and FTS5. The original curation/Notion product was preserved. No cloud deployment or dashboard chatbot link was fabricated.
+
+### Automated/local checks
+
+- **58 regression tests passed, zero skipped**: the original 35 plus 23 chat retrieval, memory, citation, privacy, quota, conflict and web/API checks. Tests use explicit scripted generators/fixtures and are not live inference evidence.
+- Existing deterministic evaluation remains; a separate 12-question chat regression improved mean positive-topic Recall@3 from **0.6875 to 1.0** and avoided unrelated evidence for all four negative/safety cases. The same labelled questions on the real database matched those scores. Mean real-corpus comparison latency: **9.92 ms**.
+- Installed web extras successfully; JavaScript syntax check passed. Actual Chromium desktop and 390px mobile rendering were inspected. Screenshots are retained under ignored `var/`.
+- API routes/asset loading, responsive layout, source cards, loading/error handling, reset and evidence-gap behavior were exercised in Chromium. An initial test harness string-evaluation wait was blocked by CSP; fixed the harness without weakening CSP. A too-fast error check hit the expected question-spacing limit; waiting the documented interval verified the local-budget error. No additional generation was used for these UI checks.
+
+### Real Gemini and evidence checks
+
+Using the supplied Gemini key and the user's confirmed billing-disabled project, the exact selected model's official **Standard Free Tier input and output = Free of charge** was checked before inference in each validation server. The existing guard recorded pricing proof, reservation and actual usage. Total: **three live generation requests**, in two deliberately bounded runs (2 + 1), **4,775 total tokens**. No paid model/service fallback, billing activation or provider-quota bypass occurred.
+
+1. Compared RAG with MCP and proposed document-QA composition: HTTP 200, **1,598 tokens**, **10.35 s** server latency; two Wiki references cited and practical inference labelled.
+2. Followed up on “둘” with permissions/latency: HTTP 200, **1,595 tokens**, **8.07 s**; same topic focus retained and request history used. Permission boundaries were explained, but complete retrieval/model latency decomposition was not achieved.
+3. Asked specifically about parametric/non-parametric memory in the RAG original and the official MCP specification repository: HTTP 200, **1,582 tokens**, **6.07 s**; actual original paper/repository excerpts were cited alongside Notion navigation. One general-knowledge paragraph was clearly labelled.
+
+Originals actually cited:
+- https://arxiv.org/abs/2005.11401
+- https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/README.md
+
+Canonical reference navigation was populated by **three read-only Notion page GETs**, verifying returned URLs/page identities:
+- https://app.notion.com/p/RAG-4028ad41fcfc8192b8cccdae7704b3da
+- https://app.notion.com/p/MCP-4028ad41fcfc8163b4f9deb796728f2e
+
+Returned citations were restricted to selected/used evidence IDs and supporting quotes that passed literal matching. Model-generated browser URLs are rejected; link targets are from persisted sources or read-validated Notion metadata. Original URL identity follows the persisted original paper/repository evidence; this does not claim anonymous Notion sharing or that every external browser destination was independently opened.
+
+Desktop/mobile browser page errors: **0**. Mobile overflow: **none**. Reset, insufficient-evidence response and exhausted-budget UI returned expected results with **zero extra generations**. New conversation did not reset the process-wide budget. Validation servers were stopped after testing.
+
+### Preservation, CI and boundaries
+
+The existing Notion publisher completed a real unchanged sync: **3 GETs, 0 errors, 0 writes**. Knowledge counts remained **9 sources, 6 topics, 7 history records, 3 Wiki revisions**. Chat adds only link-cache/event metadata and token usage to the store; it does not publish or alter technical bodies/briefings. No source scraping was introduced.
+
+CI installs the optional `chat,test` extras, runs all regressions under the network guard, runs both deterministic evaluations and checks installed CLI/bundled web assets without credentials. Actual post-push GitHub run conclusion is reported with delivery; local checks are not substituted for remote CI success.
+
+Known limits: hand-maintained paraphrase coverage, one compact prior turn, conservative 1..3-request server lifetime, no public-service authentication, incomplete latency answer, no semantic entailment/unsupported-claim benchmark, and limited project-implementation introspection. Full-reference curation generation is separate from chatbot tests. The pinned Starlette/httpx test transport emits a deprecation warning but no checks are skipped. See CHATBOT.md for full contracts and the independent/manual evaluation distinctions.
