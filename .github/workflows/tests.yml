@@ -53,6 +53,7 @@ jobs:
         run: python -m pip check
 
       - name: Run all regression tests (no skips)
+        id: regressions
         timeout-minutes: 2
         env:
           PYTHONPATH: ${{ github.workspace }}/scripts/ci_offline
@@ -62,7 +63,7 @@ jobs:
           python -m unittest discover -s tests -v 2>&1 | tee "$RUNNER_TEMP/radar-regressions.log"
           python scripts/ci_check_regressions.py "$RUNNER_TEMP/radar-regressions.log"
 
-      - name: Run deterministic retrieval evaluation
+      - name: Run deterministic retrieval evaluation (${{ steps.regressions.outputs.test_count }} regression tests)
         timeout-minutes: 2
         env:
           PYTHONPATH: ${{ github.workspace }}/scripts/ci_offline
